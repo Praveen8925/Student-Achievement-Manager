@@ -20,7 +20,12 @@ const SignIn = () => {
     try {
       const result = await login(username, password);
       if (result.success) {
-        navigate('/dashboard');
+        // Route based on user role
+        if (result.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError(result.message || 'Invalid credentials');
       }
@@ -123,7 +128,7 @@ const SignIn = () => {
         </div>
         
         <p className="text-center mt-8 text-slate-400 text-sm font-medium">
-          © 2024 Staff Achievement Management System
+          © 2026 Staff Achievement Management System
         </p>
       </motion.div>
     </div>

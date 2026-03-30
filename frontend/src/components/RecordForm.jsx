@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { recordService, certificateService } from '../api';
 
 const INPUT_CLASS = "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 focus:bg-white transition-all shadow-sm text-sm";
@@ -20,12 +21,24 @@ const DEPARTMENTS = [
 const CATEGORIES  = ['Academic', 'Sports', 'Cultural', 'Technical', 'Other'];
 const PRIZE_RESULTS = ['1st Prize', '2nd Prize', '3rd Prize', 'Participation', 'Consolation'];
 
-const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
+const RecordForm = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Get edit mode and record data from navigation state
+  const editMode = location.state?.editMode || false;
+  const recordData = location.state?.record || null;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // { type: 'success'|'error', message }
   const [uploadedFiles, setUploadedFiles] = useState({}); // key: `${eventIdx}-${catIdx}` -> File
 
-  // Get default values based on mode
+  // Handler to go back to list page
+  const handleBack = () => {
+    navigate('/dashboard/list');
+  };
+
+  // Get default values based on mode - moved inside component to access state
   const getDefaultValues = () => {
     if (editMode && recordData) {
       return {
@@ -68,12 +81,10 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
     control, name: 'events'
   });
 
-  // Reset form when recordData changes
+  // Reset form when location state changes (entering edit mode)
   useEffect(() => {
-    if (editMode && recordData) {
-      reset(getDefaultValues());
-    }
-  }, [editMode, recordData, reset]);
+    reset(getDefaultValues());
+  }, [location.state]);
 
   const handleFileChange = (eventIdx, catIdx, file) => {
     setUploadedFiles(prev => ({ ...prev, [`${eventIdx}-${catIdx}`]: file }));
@@ -85,25 +96,37 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
     try {
       if (editMode && recordData) {
         // Update existing record
+        const cat0 = data.events[0].categories[0];
         const updateData = {
           event_description: data.events[0].description.trim(),
           event_name: data.events[0].event_name?.trim() || '',
           from_date: data.events[0].from_date,
           to_date: data.events[0].to_date,
-          category: data.events[0].categories[0].category,
-          custom_category: data.events[0].categories[0].category === 'Other'
-            ? (data.events[0].categories[0].custom_category?.trim() || '')
+          category: cat0.category,
+          custom_category: cat0.category === 'Other'
+            ? (cat0.custom_category?.trim() || '')
             : '',
-          prize_result: data.events[0].categories[0].prize_result || ''
+          prize_result: cat0.prize_result || ''
         };
 
         await recordService.updateRecord(recordData.category_id, updateData);
-        setSubmitStatus({ type: 'success', message: 'Record updated successfully!' });
 
-        // Go back after successful update
-        if (onBack) {
-          setTimeout(() => onBack(), 1500);
+        // Upload certificate if file was chosen in edit mode
+        const file = uploadedFiles['0-0'];
+        if (file) {
+          try {
+            await certificateService.upload(recordData.category_id, file);
+            setSubmitStatus({ type: 'success', message: 'Record and certificate updated successfully!' });
+          } catch (certErr) {
+            console.error('Certificate upload failed:', certErr);
+            setSubmitStatus({ type: 'success', message: 'Record updated successfully! (Certificate upload failed)' });
+          }
+        } else {
+          setSubmitStatus({ type: 'success', message: 'Record updated successfully!' });
         }
+
+        // Navigate back to list page after successful update
+        setTimeout(() => navigate('/dashboard/list'), 1500);
       } else {
         // Create new record
         const payload = {
@@ -127,6 +150,7 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
         const createdRecords = res.data; // array of { student, event, category }
 
         // Upload certificates if any files were chosen
+        let uploadResults = [];
         const uploadPromises = [];
         for (const rec of createdRecords) {
           // Find matching index by event description + category
@@ -140,14 +164,34 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
               ) {
                 uploadPromises.push(
                   certificateService.upload(rec.category.id, file)
+                    .then(() => ({ success: true, categoryId: rec.category.id }))
+                    .catch((err) => ({ success: false, categoryId: rec.category.id, error: err }))
                 );
               }
             });
           });
         }
-        if (uploadPromises.length) await Promise.allSettled(uploadPromises);
 
-        setSubmitStatus({ type: 'success', message: 'Record saved successfully to the database!' });
+        if (uploadPromises.length) {
+          uploadResults = await Promise.allSettled(uploadPromises);
+          const successUploads = uploadResults.filter(result => result.status === 'fulfilled' && result.value.success).length;
+          const failedUploads = uploadResults.length - successUploads;
+
+          if (failedUploads > 0) {
+            setSubmitStatus({
+              type: 'success',
+              message: `Record saved! ${successUploads} certificate(s) uploaded, ${failedUploads} failed.`
+            });
+          } else {
+            setSubmitStatus({
+              type: 'success',
+              message: `Record and ${successUploads} certificate(s) saved successfully!`
+            });
+          }
+        } else {
+          setSubmitStatus({ type: 'success', message: 'Record saved successfully to the database!' });
+        }
+
         reset();
         setUploadedFiles({});
       }
@@ -164,9 +208,9 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
       {/* Header */}
       <header className="mb-6 sm:mb-8">
         <div className="flex items-center gap-4 mb-4">
-          {editMode && onBack && (
+          {editMode && (
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
               title="Back to Records"
             >
@@ -248,7 +292,7 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
             </div>
             <button
               type="button"
-              onClick={() => appendEvent({ description: '', event_name: '', from_date: '', to_date: '', categories: [{ category: 'Academic', prize_result: 'Participation', custom_category: '', events_name: '' }] })}
+              onClick={() => appendEvent({ description: '', event_name: '', from_date: '', to_date: '', categories: [{ category: 'Academic', prize_result: 'Participation', custom_category: '', event_name: '' }] })}
               className={`flex items-center px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold border border-slate-200 shadow-sm transition-all ${editMode ? 'hidden' : ''}`}
             >
               <Plus className="h-4 w-4 mr-1.5" /> Add Event
@@ -309,10 +353,10 @@ const RecordForm = ({ editMode = false, recordData = null, onBack = null }) => {
               Reset
             </button>
           )}
-          {editMode && onBack && (
+          {editMode && (
             <button
               type="button"
-              onClick={onBack}
+              onClick={handleBack}
               className="px-6 py-2.5 bg-white text-slate-600 font-semibold rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-sm"
             >
               Cancel
@@ -376,7 +420,7 @@ const EventCard = ({ eIdx, register, control, errors, watch, removeEvent, canRem
             />
           </div>
           <div className="md:col-span-2">
-            <label className={LABEL_CLASS}>Event Name</label>
+            <label className={LABEL_CLASS}>Event Name (Optional)</label>
             <input
               {...register(`events.${eIdx}.event_name`)}
               className={INPUT_CLASS}
@@ -410,7 +454,7 @@ const EventCard = ({ eIdx, register, control, errors, watch, removeEvent, canRem
               onClick={() => appendCat({ category: 'Academic', prize_result: 'Participation', custom_category: '' })}
               className={`text-xs text-primary-600 hover:text-primary-700 font-bold flex items-center transition-colors ${editMode ? 'hidden' : ''}`}
             >
-              <Plus className="h-3 w-3 mr-1" /> Add Category
+              <Plus className="h-3 w-3 mr-1" /> Add Achievement
             </button>
           </div>
           <div className="space-y-3">

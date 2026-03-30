@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const {
-    adminLogin, staffLogin, createStaff, listStaff, deleteStaff, resetStaffPassword, changePassword, getMe
+    login, adminLogin, staffLogin, createStaff, listStaff, deleteStaff, resetStaffPassword, changePassword, getMe
 } = require('../controllers/authController');
 
 // Public
+router.post('/login', login);
 router.post('/admin/login', adminLogin);
 router.post('/staff/login', staffLogin);
 

@@ -136,7 +136,57 @@ const downloadCertificate = async (req, res, next) => {
     }
 };
 
+// View certificate inline (for preview in browser)
+const viewCertificate = async (req, res, next) => {
+    try {
+        const { categoryId } = req.params;
+
+        // Get the category to retrieve certificate info
+        const { data: categoryData, error: fetchError } = await supabase
+            .from('event_categories')
+            .select('*')
+            .eq('id', categoryId)
+            .single();
+
+        if (fetchError) {
+            if (fetchError.code === 'PGRST116') {
+                const error = new Error('Category not found');
+                error.statusCode = 404;
+                return next(error);
+            }
+            throw new Error(`Failed to fetch category: ${fetchError.message}`);
+        }
+
+        if (!categoryData.certificate_filename) {
+            const error = new Error('No certificate found for this category');
+            error.statusCode = 404;
+            return next(error);
+        }
+
+        const filePath = path.join('uploads', categoryData.certificate_filename);
+
+        // Check if file exists
+        try {
+            await fs.access(filePath);
+        } catch (err) {
+            const error = new Error('Certificate file not found');
+            error.statusCode = 404;
+            return next(error);
+        }
+
+        // Read and send file as inline PDF
+        const fileData = await fs.readFile(filePath);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename=certificate.pdf');
+        res.send(fileData);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     uploadCertificate,
-    downloadCertificate
+    downloadCertificate,
+    viewCertificate
 };

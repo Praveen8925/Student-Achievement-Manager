@@ -68,29 +68,30 @@ const createRecord = async (req, res, next) => {
         }
 
         // Create events and categories
+        // Each category gets its OWN event entry so every achievement row is independent
         const createdRecords = [];
 
         for (const event of events) {
-            // Create event
-            const { data: newEvent, error: eventError } = await supabase
-                .from('events')
-                .insert([{
-                    student_id: student.id,
-                    description: event.description,
-                    event_name: event.event_name || null,
-                    from_date: event.from_date,
-                    to_date: event.to_date,
-                    created_by_staff_id: req.user?.id || null
-                }])
-                .select()
-                .single();
-
-            if (eventError) {
-                throw new Error(`Failed to create event: ${eventError.message}`);
-            }
-
-            // Create categories for this event
             for (const category of event.categories) {
+                // Create a separate event row for each category achievement
+                const { data: newEvent, error: eventError } = await supabase
+                    .from('events')
+                    .insert([{
+                        student_id: student.id,
+                        description: event.description,
+                        event_name: category.event_name?.trim() || event.event_name || null,
+                        from_date: event.from_date,
+                        to_date: event.to_date,
+                        created_by_staff_id: req.user?.id || null
+                    }])
+                    .select()
+                    .single();
+
+                if (eventError) {
+                    throw new Error(`Failed to create event: ${eventError.message}`);
+                }
+
+                // Create the category entry linked to this event
                 const { data: newCategory, error: categoryError } = await supabase
                     .from('event_categories')
                     .insert([{
@@ -108,11 +109,7 @@ const createRecord = async (req, res, next) => {
                     throw new Error(`Failed to create category: ${categoryError.message}`);
                 }
 
-                createdRecords.push({
-                    student,
-                    event: newEvent,
-                    category: newCategory
-                });
+                createdRecords.push({ student, event: newEvent, category: newCategory });
             }
         }
 

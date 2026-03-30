@@ -17,14 +17,14 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  /** Staff login via real backend */
+  /** Unified login via real backend (handles both admin and staff) */
   const login = async (username, password) => {
-    const { data } = await authService.staffLogin({ username, password });
+    const { data } = await authService.login({ username, password });
     if (data.success) {
       localStorage.setItem('staff_token', data.token);
       localStorage.setItem('staff_user', JSON.stringify(data.user));
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     }
     return { success: false, message: data.message || 'Login failed.' };
   };

@@ -38,7 +38,8 @@ const createRecordSchema = Joi.object({
                         'any.required': 'Category is required'
                     }),
                     custom_category: Joi.string().trim().optional().allow(''),
-                    prize_result: Joi.string().trim().optional().allow('')
+                    prize_result: Joi.string().trim().optional().allow(''),
+                    event_name: Joi.string().trim().optional().allow('')
                 })
             ).required().messages({
                 'array.min': 'At least one category is required'

@@ -22,6 +22,53 @@ const adminLogin = async (req, res) => {
     res.json({ success: true, token, user: { role: 'admin', name: 'Administrator', username } });
 };
 
+// ─── Unified Login (Admin or Staff) ──────────────────────────────────────────
+const login = async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password)
+        return res.status(400).json({ success: false, message: 'Username and password are required.' });
+
+    // Try admin login first
+    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+        const token = signToken({ role: 'admin', username });
+        return res.json({ success: true, token, user: { role: 'admin', name: 'Administrator', username } });
+    }
+
+    // Try staff login
+    const { data: staff, error } = await supabase
+        .from('staff_users')
+        .select('*')
+        .or(`username.eq.${username.trim()},register_number.eq.${username.trim()}`)
+        .single();
+
+    if (error || !staff)
+        return res.status(401).json({ success: false, message: 'Invalid credentials. Please check your username and password.' });
+
+    const valid = await bcrypt.compare(password, staff.password_hash);
+    if (!valid)
+        return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+
+    const token = signToken({
+        id: staff.id,
+        role: 'staff',
+        username: staff.username,
+        name: staff.name,
+        register_number: staff.register_number
+    });
+
+    res.json({
+        success: true,
+        token,
+        user: {
+            id: staff.id,
+            role: 'staff',
+            name: staff.name,
+            username: staff.username,
+            staffId: staff.register_number || staff.username
+        }
+    });
+};
+
 // ─── Staff Login ─────────────────────────────────────────────────────────────
 const staffLogin = async (req, res) => {
     const { username, password } = req.body;
@@ -180,4 +227,4 @@ const getMe = (req, res) => {
     res.json({ success: true, user: req.user });
 };
 
-module.exports = { adminLogin, staffLogin, createStaff, listStaff, deleteStaff, resetStaffPassword, changePassword, getMe };
+module.exports = { login, adminLogin, staffLogin, createStaff, listStaff, deleteStaff, resetStaffPassword, changePassword, getMe };

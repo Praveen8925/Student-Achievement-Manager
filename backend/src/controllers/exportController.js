@@ -2,6 +2,8 @@ const supabase = require('../utils/supabase');
 const { searchFilterSchema } = require('../utils/validation');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
 
 // Export records to Excel
 const exportToExcel = async (req, res, next) => {
@@ -161,13 +163,22 @@ const exportToPDF = async (req, res, next) => {
         // Pipe PDF to response
         doc.pipe(res);
 
-        // Add title
-        doc.fontSize(20).text('Staff Achievement & Event Records', { align: 'center' });
-        doc.moveDown();
-
-        // Add generation date
-        doc.fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'right' });
-        doc.moveDown();
+        // Add logo image if available
+        const logoPath = path.join(process.cwd(), '..', 'stc.jpg');
+        if (fs.existsSync(logoPath)) {
+            try {
+                doc.image(logoPath, 50, 50, {
+                    fit: [495, 80],
+                    align: 'center'
+                });
+                doc.moveDown(1);
+            } catch (err) {
+                console.error('Error adding logo:', err);
+                doc.moveDown(0.5);
+            }
+        } else {
+            doc.moveDown(0.5);
+        }
 
         // Add filter info if applied
         if (search || from_date || to_date || category) {
@@ -178,10 +189,6 @@ const exportToPDF = async (req, res, next) => {
             if (category) doc.fontSize(10).text(`Category: ${category}`);
             doc.moveDown();
         }
-
-        // Add total count
-        doc.fontSize(12).text(`Total Records: ${data ? data.length : 0}`);
-        doc.moveDown();
 
         // Add records
         if (data && data.length > 0) {
@@ -196,10 +203,16 @@ const exportToPDF = async (req, res, next) => {
                 doc.text(`Register Number: ${record.register_number}`);
                 doc.text(`Student Name: ${record.student_name}`);
                 doc.text(`Department: ${record.department}`);
-                doc.text(`Event: ${record.event_description}`);
+                if (record.event_name) {
+                    doc.text(`Event Name: ${record.event_name}`);
+                }
+                doc.text(`Event Description: ${record.event_description}`);
                 doc.text(`Category: ${record.category}`);
+                if (record.prize_result) {
+                    doc.text(`Prize/Result: ${record.prize_result}`);
+                }
                 doc.text(`Duration: ${record.from_date} to ${record.to_date}`);
-                doc.text(`Certificate: ${record.certificate_url ? 'Available' : 'Not Available'}`);
+                doc.text(`Certificate: ${record.certificate_filename ? 'Available' : 'Not Available'}`);
                 doc.moveDown(0.5);
             });
         } else {

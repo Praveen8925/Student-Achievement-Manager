@@ -43,7 +43,7 @@ function App() {
             <Route path="reports"  element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/signin" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>

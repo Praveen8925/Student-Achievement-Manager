@@ -41,6 +41,7 @@ export const certificateService = {
     });
   },
   download: (categoryId) => api.get(`/certificates/${categoryId}/download`, { responseType: 'blob' }),
+  view: (categoryId) => api.get(`/certificates/${categoryId}/view`, { responseType: 'blob' }),
 };
 
 export const exportService = {
@@ -49,6 +50,7 @@ export const exportService = {
 };
 
 export const authService = {
+  login: (credentials) => api.post('/auth/login', credentials),
   staffLogin: (credentials) => api.post('/auth/staff/login', credentials),
   adminLogin: (credentials) => api.post('/auth/admin/login', credentials),
   getMe: () => api.get('/auth/me'),

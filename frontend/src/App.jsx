@@ -13,25 +13,21 @@ import AdminPortal from './pages/AdminPortal';
 // Protected Route for Staff
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-  if (!user) return <Navigate to="/signin" replace />;
-  return children;
-};
 
-// Protected Route for Admin
-const AdminProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-  if (!user) return <Navigate to="/signin" replace />;
-  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Check both state and localStorage to handle immediate post-login navigation
+  const savedToken = localStorage.getItem('staff_token');
+  if (!user && !savedToken) {
+    return <Navigate to="/signin" replace />;
+  }
+
   return children;
 };
 
@@ -41,14 +37,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/signin"  element={<SignIn />} />
-          <Route
-            path="/admin"
-            element={
-              <AdminProtectedRoute>
-                <AdminPortal />
-              </AdminProtectedRoute>
-            }
-          />
+          <Route path="/admin"   element={<AdminPortal />} />
           <Route
             path="/dashboard"
             element={

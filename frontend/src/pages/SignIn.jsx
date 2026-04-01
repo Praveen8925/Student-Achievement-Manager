@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { LogIn, Lock, Mail, Loader2 } from 'lucide-react';
+import { LogIn, Lock, Mail, Loader2, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const SignIn = () => {
@@ -9,22 +9,28 @@ const SignIn = () => {
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+
     setError('');
     setIsLoading(true);
 
     try {
       const result = await login(username, password);
       if (result.success) {
-        // Route based on user role
-        if (result.user.role === 'admin') {
-          navigate('/admin');
+        if (result.user.role === 'staff') {
+          navigate('/dashboard', { replace: true });
         } else {
-          navigate('/dashboard');
+          // Admin tried the staff portal — clear tokens and show message
+          localStorage.removeItem('staff_token');
+          localStorage.removeItem('staff_user');
+          setError('Admin users should login through /admin portal');
+          setTimeout(() => navigate('/admin', { replace: true }), 2000);
         }
       } else {
         setError(result.message || 'Invalid credentials');
@@ -70,7 +76,6 @@ const SignIn = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white focus:border-primary-500 transition-all shadow-sm"
-                  placeholder="Your username or register number"
                   required
                 />
               </div>
@@ -83,13 +88,24 @@ const SignIn = () => {
                   <Lock className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white focus:border-primary-500 transition-all shadow-sm"
+                  className="block w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:bg-white focus:border-primary-500 transition-all shadow-sm"
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
 

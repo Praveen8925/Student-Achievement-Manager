@@ -11,11 +11,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto-logout on 401
+// Auto-logout on 401 — but NOT when the login request itself fails (wrong password)
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const requestUrl = err.config?.url || '';
+    const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/admin/login');
+    if (err.response?.status === 401 && !isLoginRequest) {
+      // Only redirect for authenticated requests, not for login attempts
       localStorage.removeItem('staff_token');
       localStorage.removeItem('staff_user');
       window.location.href = '/signin';

@@ -52,15 +52,18 @@ const AdminPortal = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Always clear any stored admin session on page load — login is required every time
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (token) { setAuthed(true); fetchStaff(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    setAuthed(false);
   }, []);
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); setLoginError('');
+    e.stopPropagation();
+    setLoginError('');
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/admin/login`, {
         method: 'POST',
@@ -73,11 +76,14 @@ const AdminPortal = () => {
         setAuthed(true);
         fetchStaff();
       } else {
-        setLoginError(data.message || 'Invalid admin credentials.');
+        // Wrong credentials — show error inline, do NOT reload
+        setLoginError(data.message || 'Invalid admin credentials. Please try again.');
       }
     } catch {
       setLoginError('Network error. Make sure the backend server is running.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchStaff = async () => {
@@ -197,7 +203,6 @@ const AdminPortal = () => {
                 value={loginForm.username}
                 onChange={e => setLoginForm(f => ({ ...f, username: e.target.value }))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all shadow-sm"
-                placeholder="admin"
               />
             </div>
             <div className="space-y-2">
@@ -278,17 +283,17 @@ const AdminPortal = () => {
             <div className="space-y-2">
               <label className={LABEL}><User className="inline h-3.5 w-3.5 mr-1.5" />Full Name *</label>
               <input required value={registerForm.name} onChange={e => setRegisterForm(f => ({ ...f, name: e.target.value }))}
-                className={INPUT} placeholder="e.g. Dr. Rajesh Kumar" />
+                className={INPUT} placeholder="" />
             </div>
             <div className="space-y-2">
               <label className={LABEL}><Hash className="inline h-3.5 w-3.5 mr-1.5" />Username *</label>
               <input required value={registerForm.username} onChange={e => setRegisterForm(f => ({ ...f, username: e.target.value }))}
-                className={INPUT} placeholder="e.g. rajesh.kumar" />
+                className={INPUT} placeholder="" />
             </div>
             <div className="space-y-2">
               <label className={LABEL}><Hash className="inline h-3.5 w-3.5 mr-1.5" />Register / Staff No. (optional)</label>
               <input value={registerForm.register_number} onChange={e => setRegisterForm(f => ({ ...f, register_number: e.target.value }))}
-                className={INPUT} placeholder="e.g. STAFF001" />
+                className={INPUT} placeholder="" />
             </div>
             <div className="space-y-2">
               <label className={LABEL}><GraduationCap className="inline h-3.5 w-3.5 mr-1.5" />Department</label>
@@ -302,7 +307,7 @@ const AdminPortal = () => {
               <div className="relative">
                 <input required type={showNewPwd ? 'text' : 'password'} value={registerForm.password}
                   onChange={e => setRegisterForm(f => ({ ...f, password: e.target.value }))}
-                  className={INPUT + " pr-12"} placeholder="Min. 6 characters" />
+                  className={INPUT + " pr-12"} />
                 <button type="button" onClick={() => setShowNewPwd(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                   {showNewPwd ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>

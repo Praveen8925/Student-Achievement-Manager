@@ -26,6 +26,7 @@ const SettingsPage = () => {
   const [pwdForm, setPwdForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdStatus, setPwdStatus] = useState(null); // { type, message }
 
@@ -114,13 +115,19 @@ const SettingsPage = () => {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Confirm New Password</label>
-            <input
-              type="password" required
-              value={pwdForm.confirm_password}
-              onChange={e => setPwdForm(f => ({ ...f, confirm_password: e.target.value }))}
-              className={INPUT}
-              placeholder="Repeat new password"
-            />
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'} required
+                value={pwdForm.confirm_password}
+                onChange={e => setPwdForm(f => ({ ...f, confirm_password: e.target.value }))}
+                className={INPUT + ' pr-10'}
+                placeholder="Repeat new password"
+              />
+              <button type="button" onClick={() => setShowConfirm(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {pwdStatus && (

@@ -30,7 +30,7 @@ const SignIn = () => {
         setError(result.message || 'Invalid credentials');
       }
     } catch (err) {
-      setError(err?.response?.data?.message || 'Server error. Make sure the backend is running.');
+      setError('Server error. Please try again later.');
     } finally {
       setIsLoading(false);
     }

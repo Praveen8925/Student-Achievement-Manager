@@ -36,9 +36,8 @@ export const certificateService = {
   upload: (categoryId, file) => {
     const fd = new FormData();
     fd.append('certificate', file);
-    return api.post(`/certificates/${categoryId}/upload`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    // Don't set Content-Type manually - axios will set it automatically with proper boundary
+    return api.post(`/certificates/${categoryId}/upload`, fd);
   },
   download: (categoryId) => api.get(`/certificates/${categoryId}/download`, { responseType: 'blob' }),
   view: (categoryId) => api.get(`/certificates/${categoryId}/view`, { responseType: 'blob' }),

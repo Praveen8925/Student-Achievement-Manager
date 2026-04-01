@@ -19,14 +19,21 @@ export const AuthProvider = ({ children }) => {
 
   /** Unified login via real backend (handles both admin and staff) */
   const login = async (username, password) => {
-    const { data } = await authService.login({ username, password });
-    if (data.success) {
-      localStorage.setItem('staff_token', data.token);
-      localStorage.setItem('staff_user', JSON.stringify(data.user));
-      setUser(data.user);
-      return { success: true, user: data.user };
+    try {
+      const { data } = await authService.login({ username, password });
+      if (data.success) {
+        localStorage.setItem('staff_token', data.token);
+        localStorage.setItem('staff_user', JSON.stringify(data.user));
+        setUser(data.user);
+        return { success: true, user: data.user };
+      }
+      return { success: false, message: data.message || 'Login failed.' };
+    } catch (error) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Invalid credentials. Please check your username and password.'
+      };
     }
-    return { success: false, message: data.message || 'Login failed.' };
   };
 
   /** Admin login — stores token but redirects to /admin */

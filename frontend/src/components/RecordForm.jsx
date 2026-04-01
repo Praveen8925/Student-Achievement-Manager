@@ -150,27 +150,28 @@ const RecordForm = () => {
         const createdRecords = res.data; // array of { student, event, category }
 
         // Upload certificates if any files were chosen
+        // Records are created in the same order as form events/categories
         let uploadResults = [];
         const uploadPromises = [];
-        for (const rec of createdRecords) {
-          // Find matching index by event description + category
-          data.events.forEach((ev, eIdx) => {
-            ev.categories.forEach((cat, cIdx) => {
-              const file = uploadedFiles[`${eIdx}-${cIdx}`];
-              if (
-                file &&
-                rec.event.description === ev.description &&
-                rec.category.category === cat.category
-              ) {
-                uploadPromises.push(
-                  certificateService.upload(rec.category.id, file)
-                    .then(() => ({ success: true, categoryId: rec.category.id }))
-                    .catch((err) => ({ success: false, categoryId: rec.category.id, error: err }))
-                );
-              }
-            });
+        let recordIndex = 0;
+
+        data.events.forEach((ev, eIdx) => {
+          ev.categories.forEach((cat, cIdx) => {
+            const file = uploadedFiles[`${eIdx}-${cIdx}`];
+            if (file && createdRecords[recordIndex]) {
+              const categoryId = createdRecords[recordIndex].category.id;
+              uploadPromises.push(
+                certificateService.upload(categoryId, file)
+                  .then(() => ({ success: true, categoryId }))
+                  .catch((err) => {
+                    console.error('Certificate upload failed:', err);
+                    return { success: false, categoryId, error: err };
+                  })
+              );
+            }
+            recordIndex++;
           });
-        }
+        });
 
         if (uploadPromises.length) {
           uploadResults = await Promise.allSettled(uploadPromises);
@@ -249,7 +250,6 @@ const RecordForm = () => {
               <input
                 {...register('register_number', { required: 'Required' })}
                 className={`${INPUT_CLASS} ${errors.register_number ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400' : ''} ${editMode ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder="e.g. 21CS001"
                 readOnly={editMode}
               />
               {errors.register_number && <p className="text-xs text-red-500 mt-1">{errors.register_number.message}</p>}
@@ -259,7 +259,6 @@ const RecordForm = () => {
               <input
                 {...register('student_name', { required: 'Required' })}
                 className={`${INPUT_CLASS} ${errors.student_name ? 'border-red-400 focus:ring-red-400/30 focus:border-red-400' : ''} ${editMode ? 'opacity-60 cursor-not-allowed' : ''}`}
-                placeholder="e.g. John Doe"
                 readOnly={editMode}
               />
               {errors.student_name && <p className="text-xs text-red-500 mt-1">{errors.student_name.message}</p>}
@@ -416,7 +415,6 @@ const EventCard = ({ eIdx, register, control, errors, watch, removeEvent, canRem
             <textarea
               {...register(`events.${eIdx}.description`, { required: 'Required' })}
               className={`${INPUT_CLASS} h-24 resize-none`}
-              placeholder="e.g. Won First Place in National Level Hackathon at IIT Madras"
             />
           </div>
           <div className="md:col-span-2">
@@ -424,7 +422,6 @@ const EventCard = ({ eIdx, register, control, errors, watch, removeEvent, canRem
             <input
               {...register(`events.${eIdx}.event_name`)}
               className={INPUT_CLASS}
-              placeholder="e.g. National Level Hackathon 2026"
             />
           </div>
           <div>
@@ -502,7 +499,6 @@ const EventCard = ({ eIdx, register, control, errors, watch, removeEvent, canRem
                           required: isOtherCategory ? 'Please specify the category' : false
                         })}
                         className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
-                        placeholder="e.g. Leadership, Innovation, Excellence"
                       />
                       {errors.events?.[eIdx]?.categories?.[cIdx]?.custom_category && (
                         <p className="text-xs text-red-500 mt-1">{errors.events[eIdx].categories[cIdx].custom_category.message}</p>

@@ -29,7 +29,7 @@ const exportToExcel = async (req, res, next) => {
 
         // Apply filters
         if (search) {
-            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,event_description.ilike.%${search}%`);
+            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,participation_description.ilike.%${search}%,awarding_agency.ilike.%${search}%`);
         }
         if (from_date) {
             query = query.gte('from_date', from_date);
@@ -57,11 +57,15 @@ const exportToExcel = async (req, res, next) => {
             { header: 'Register Number', key: 'register_number', width: 18 },
             { header: 'Student Name', key: 'student_name', width: 25 },
             { header: 'Department', key: 'department', width: 20 },
-            { header: 'Event Description', key: 'event_description', width: 35 },
-            { header: 'Category', key: 'category', width: 15 },
+            { header: 'Category', key: 'category', width: 18 },
+            { header: 'Activity', key: 'activity', width: 25 },
+            { header: 'Sub-Activity', key: 'sub_activity', width: 25 },
             { header: 'From Date', key: 'from_date', width: 12 },
             { header: 'To Date', key: 'to_date', width: 12 },
-            { header: 'Has Certificate', key: 'has_certificate', width: 15 }
+            { header: 'Participation Description', key: 'participation_description', width: 35 },
+            { header: 'Awarding Agency', key: 'awarding_agency', width: 25 },
+            { header: 'Prize / Result', key: 'prize_result', width: 18 },
+            { header: 'Certificate', key: 'has_certificate', width: 15 }
         ];
 
         // Style header row
@@ -79,11 +83,15 @@ const exportToExcel = async (req, res, next) => {
                     register_number: record.register_number,
                     student_name: record.student_name,
                     department: record.department,
-                    event_description: record.event_description,
                     category: record.category,
+                    activity: record.event_name || '',
+                    sub_activity: record.category === 'Extra-Curricular' ? (record.custom_category || '') : '',
                     from_date: record.from_date,
                     to_date: record.to_date,
-                    has_certificate: record.certificate_url ? 'Yes' : 'No'
+                    participation_description: record.participation_description || '',
+                    awarding_agency: record.awarding_agency || '',
+                    prize_result: record.prize_result || '',
+                    has_certificate: record.certificate_filename ? 'Available' : 'Not Available'
                 });
             });
         }
@@ -131,7 +139,7 @@ const exportToPDF = async (req, res, next) => {
 
         // Apply filters
         if (search) {
-            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,event_description.ilike.%${search}%`);
+            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,participation_description.ilike.%${search}%,awarding_agency.ilike.%${search}%`);
         }
         if (from_date) {
             query = query.gte('from_date', from_date);
@@ -200,18 +208,17 @@ const exportToPDF = async (req, res, next) => {
 
                 doc.fontSize(11).text(`${index + 1}. Record`, { underline: true });
                 doc.fontSize(9);
-                doc.text(`Register Number: ${record.register_number}`);
-                doc.text(`Student Name: ${record.student_name}`);
-                doc.text(`Department: ${record.department}`);
-                if (record.event_name) {
-                    doc.text(`Event Name: ${record.event_name}`);
-                }
-                doc.text(`Event Description: ${record.event_description}`);
+                doc.text(`Reg No: ${record.register_number}`);
+                doc.text(`Student: ${record.student_name}`);
+                doc.text(`Dept: ${record.department}`);
                 doc.text(`Category: ${record.category}`);
-                if (record.prize_result) {
-                    doc.text(`Prize/Result: ${record.prize_result}`);
-                }
-                doc.text(`Duration: ${record.from_date} to ${record.to_date}`);
+                doc.text(`Activity: ${record.event_name || '—'}`);
+                doc.text(`Sub-Activity: ${record.category === 'Extra-Curricular' ? (record.custom_category || '—') : '—'}`);
+                doc.text(`From: ${record.from_date}`);
+                doc.text(`To: ${record.to_date}`);
+                doc.text(`Participation Description: ${record.participation_description || '—'}`);
+                doc.text(`Awarding Agency: ${record.awarding_agency || '—'}`);
+                doc.text(`Prize / Result: ${record.prize_result || '—'}`);
                 doc.text(`Certificate: ${record.certificate_filename ? 'Available' : 'Not Available'}`);
                 doc.moveDown(0.5);
             });

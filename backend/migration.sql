@@ -1,37 +1,59 @@
 -- ============================================================
 -- Run this SQL in your Supabase SQL Editor (Dashboard > SQL Editor)
+-- WARNING: This script DROPS tables and deletes all data.
 -- ============================================================
 
--- 1. Add event_name column to events table (if not already present)
-ALTER TABLE events ADD COLUMN IF NOT EXISTS event_name VARCHAR(500);
+-- Drop old data and schema for the add-record flow
+DROP VIEW IF EXISTS flattened_records;
+DROP TABLE IF EXISTS event_categories CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS students CASCADE;
 
--- 2. Add created_by_staff_id for record isolation (if not already present)
-ALTER TABLE events ADD COLUMN IF NOT EXISTS created_by_staff_id UUID REFERENCES staff_users(id) ON DELETE SET NULL;
-
--- 3. Create staff_users table for JWT authentication
-CREATE TABLE IF NOT EXISTS staff_users (
+-- Students
+CREATE TABLE students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    register_number VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    register_number VARCHAR(50),
-    department VARCHAR(100),
-    password_hash TEXT NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_students_register_number ON students(register_number);
+
+-- Events (one per participation entry)
+CREATE TABLE events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    event_name VARCHAR(500),
+    participation_description TEXT,
+    awarding_agency TEXT,
+    from_date DATE NOT NULL,
+    to_date DATE NOT NULL,
+    created_by_staff_id UUID REFERENCES staff_users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_events_student_id ON events(student_id);
+
+-- Event categories (stores category + optional sub-activity in custom_category)
+CREATE TABLE event_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    category VARCHAR(50) NOT NULL,
+    custom_category VARCHAR(500),
+    prize_result VARCHAR(100),
+    certificate_url TEXT,
+    certificate_filename TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_staff_users_username ON staff_users(username);
+ALTER TABLE event_categories ADD CONSTRAINT event_categories_category_check
+    CHECK (category IN ('Curricular', 'Co-Curricular', 'Extra-Curricular'));
 
--- Enable RLS on staff_users
-ALTER TABLE staff_users ENABLE ROW LEVEL SECURITY;
+CREATE INDEX idx_event_categories_event_id ON event_categories(event_id);
 
--- 4. Set security policy (PostgreSQL doesn't support IF NOT EXISTS for policies, so we DROP first)
-DROP POLICY IF EXISTS "Service role full access on staff_users" ON staff_users;
-CREATE POLICY "Service role full access on staff_users" ON staff_users
-    FOR ALL USING (true);
-
--- 5. Recreate flattened_records view (DROP first to change column structure)
-DROP VIEW IF EXISTS flattened_records;
+-- Recreate flattened_records view
 CREATE VIEW flattened_records AS
 SELECT
     s.id as student_id,
@@ -40,7 +62,8 @@ SELECT
     s.department,
     e.id as event_id,
     e.event_name,
-    e.description as event_description,
+    e.participation_description,
+    e.awarding_agency,
     e.from_date,
     e.to_date,
     e.created_by_staff_id,

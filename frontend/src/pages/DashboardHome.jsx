@@ -178,14 +178,20 @@ const DashboardHome = () => {
                       <th className="px-6 py-3">Reg No</th>
                       <th className="px-6 py-3">Student</th>
                       <th className="px-6 py-3">Dept</th>
-                      <th className="px-6 py-3">Event</th>
                       <th className="px-6 py-3">Category</th>
-                      <th className="px-6 py-3">Date</th>
+                      <th className="px-6 py-3">Activity</th>
+                      <th className="px-6 py-3">Sub-Activity</th>
+                      <th className="px-6 py-3">From</th>
+                      <th className="px-6 py-3">To</th>
+                      <th className="px-6 py-3">Participation Description</th>
+                      <th className="px-6 py-3">Awarding Agency</th>
+                      <th className="px-6 py-3">Prize / Result</th>
+                      <th className="px-6 py-3">Certificate</th>
                       <th className="px-6 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {records.slice(0, 6).map((record) => (
+                    {records.slice(0, 10).map((record) => (
                       <tr key={record.category_id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="px-6 py-4 font-mono text-xs font-bold text-primary-600">{record.register_number}</td>
                         <td className="px-6 py-4">
@@ -199,15 +205,38 @@ const DashboardHome = () => {
                         <td className="px-6 py-4">
                           <span className="text-xs px-2 py-1 bg-slate-100 rounded-md text-slate-600 font-semibold">{record.department}</span>
                         </td>
-                        <td className="px-6 py-4 max-w-[180px]">
-                          <p className="text-sm text-slate-700 truncate">{record.event_description}</p>
-                        </td>
                         <td className="px-6 py-4">
                           <span className={`text-[11px] font-bold px-2 py-1 rounded-md ${categoryColor(record.category)}`}>
                             {record.category}
                           </span>
                         </td>
+                        <td className="px-6 py-4 max-w-[180px]">
+                          <p className="text-sm text-slate-700 truncate">{record.event_name || '—'}</p>
+                        </td>
+                        <td className="px-6 py-4 max-w-[160px]">
+                          {record.category === 'Extra-Curricular'
+                            ? <p className="text-sm text-slate-600 truncate">{record.custom_category || '—'}</p>
+                            : <span className="text-slate-300 italic text-xs">—</span>
+                          }
+                        </td>
                         <td className="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">{record.from_date}</td>
+                        <td className="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">{record.to_date}</td>
+                        <td className="px-6 py-4 max-w-[180px]">
+                          <p className="text-sm text-slate-700 truncate">{record.participation_description || '—'}</p>
+                        </td>
+                        <td className="px-6 py-4 max-w-[180px]">
+                          <p className="text-sm text-slate-600 truncate">{record.awarding_agency || '—'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-slate-600 whitespace-nowrap">{record.prize_result || '—'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-2 py-1 rounded-md whitespace-nowrap ${
+                            record.certificate_filename
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {record.certificate_filename ? 'Available' : 'Not Available'}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <Link
                             to="/dashboard/list"
@@ -238,7 +267,7 @@ const DashboardHome = () => {
                       </div>
                       <span className="text-xs px-2 py-1 bg-slate-100 rounded-md text-slate-600 font-semibold">{record.department}</span>
                     </div>
-                    <p className="text-sm text-slate-700 mb-2.5 line-clamp-2">{record.event_description}</p>
+                    <p className="text-sm text-slate-700 mb-2.5 line-clamp-2">{record.participation_description || '—'}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${categoryColor(record.category)}`}>

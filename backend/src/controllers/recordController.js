@@ -2,10 +2,48 @@ const supabase = require('../utils/supabase');
 const {
     createRecordSchema,
     updateCategorySchema,
-    searchFilterSchema
+    searchFilterSchema,
+    studentLookupSchema
 } = require('../utils/validation');
 const fs = require('fs').promises;
 const path = require('path');
+
+// Get students by department and year
+const getStudentsByDeptAndYear = async (req, res, next) => {
+    try {
+        const { error, value } = studentLookupSchema.validate(req.query);
+        if (error) {
+            error.isJoi = true;
+            return next(error);
+        }
+
+        const { department, year } = value;
+
+        // Basic mapping of year to register number prefix.
+        // This is a simplified example. You might have a more complex logic.
+        const currentYear = new Date().getFullYear();
+        const yearPrefix = (currentYear - parseInt(year.charAt(0), 10) + 1).toString().substring(2);
+
+        const { data, error: fetchError } = await supabase
+            .from('students')
+            .select('id, name, register_number, department')
+            .eq('department', department)
+            .like('register_number', `${yearPrefix}%`)
+            .order('register_number', { ascending: true });
+
+        if (fetchError) {
+            throw new Error(`Failed to fetch students: ${fetchError.message}`);
+        }
+
+        res.status(200).json({
+            success: true,
+            data: data || [],
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 // Create a new record (student + events + categories)
 const createRecord = async (req, res, next) => {
@@ -17,7 +55,7 @@ const createRecord = async (req, res, next) => {
             return next(error);
         }
 
-        const { register_number, student_name, department, events } = value;
+        const { register_number, student_name, department, participations } = value;
 
         // Check if student already exists
         let student;
@@ -67,50 +105,50 @@ const createRecord = async (req, res, next) => {
             student = newStudent;
         }
 
-        // Create events and categories
-        // Each category gets its OWN event entry so every achievement row is independent
+        // Create events and categories for each participation
         const createdRecords = [];
 
-        for (const event of events) {
-            for (const category of event.categories) {
-                // Create a separate event row for each category achievement
-                const { data: newEvent, error: eventError } = await supabase
-                    .from('events')
-                    .insert([{
-                        student_id: student.id,
-                        description: event.description,
-                        event_name: category.event_name?.trim() || event.event_name || null,
-                        from_date: event.from_date,
-                        to_date: event.to_date,
-                        created_by_staff_id: req.user?.id || null
-                    }])
-                    .select()
-                    .single();
+        for (const entry of participations) {
+            const activityName = entry.activity === 'Other'
+                ? (entry.custom_activity || '').trim() || 'Other'
+                : entry.activity;
 
-                if (eventError) {
-                    throw new Error(`Failed to create event: ${eventError.message}`);
-                }
+            const { data: newEvent, error: eventError } = await supabase
+                .from('events')
+                .insert([{
+                    student_id: student.id,
+                    participation_description: entry.participation_description,
+                    awarding_agency: entry.awarding_agency,
+                    event_name: activityName,
+                    from_date: entry.from_date,
+                    to_date: entry.to_date,
+                    created_by_staff_id: req.user?.id || null
+                }])
+                .select()
+                .single();
 
-                // Create the category entry linked to this event
-                const { data: newCategory, error: categoryError } = await supabase
-                    .from('event_categories')
-                    .insert([{
-                        event_id: newEvent.id,
-                        category: category.category,
-                        custom_category: category.custom_category || null,
-                        prize_result: category.prize_result || null,
-                        certificate_url: null,
-                        certificate_filename: null
-                    }])
-                    .select()
-                    .single();
-
-                if (categoryError) {
-                    throw new Error(`Failed to create category: ${categoryError.message}`);
-                }
-
-                createdRecords.push({ student, event: newEvent, category: newCategory });
+            if (eventError) {
+                throw new Error(`Failed to create event: ${eventError.message}`);
             }
+
+            const { data: newCategory, error: categoryError } = await supabase
+                .from('event_categories')
+                .insert([{
+                    event_id: newEvent.id,
+                    category: entry.category,
+                    custom_category: (entry.custom_activity || '').trim() || null,
+                    prize_result: entry.prize_result || null,
+                    certificate_url: null,
+                    certificate_filename: null
+                }])
+                .select()
+                .single();
+
+            if (categoryError) {
+                throw new Error(`Failed to create category: ${categoryError.message}`);
+            }
+
+            createdRecords.push({ student, event: newEvent, category: newCategory });
         }
 
         res.status(201).json({
@@ -149,7 +187,7 @@ const getRecords = async (req, res, next) => {
 
         // Apply search filter
         if (search) {
-            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,event_description.ilike.%${search}%`);
+            query = query.or(`register_number.ilike.%${search}%,student_name.ilike.%${search}%,participation_description.ilike.%${search}%,awarding_agency.ilike.%${search}%`);
         }
 
         // Apply department filter
@@ -255,9 +293,10 @@ const updateRecord = async (req, res, next) => {
         }
 
         // Update event if event fields are provided
-        if (value.event_description || value.event_name !== undefined || value.from_date || value.to_date) {
+        if (value.participation_description || value.awarding_agency || value.event_name !== undefined || value.from_date || value.to_date) {
             const eventUpdate = {};
-            if (value.event_description) eventUpdate.description = value.event_description;
+            if (value.participation_description !== undefined) eventUpdate.participation_description = value.participation_description;
+            if (value.awarding_agency !== undefined) eventUpdate.awarding_agency = value.awarding_agency;
             if (value.event_name !== undefined) eventUpdate.event_name = value.event_name || null;
             if (value.from_date) eventUpdate.from_date = value.from_date;
             if (value.to_date) eventUpdate.to_date = value.to_date;
@@ -368,5 +407,6 @@ module.exports = {
     getRecords,
     getRecordById,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    getStudentsByDeptAndYear
 };

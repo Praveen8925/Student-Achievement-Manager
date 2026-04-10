@@ -8,8 +8,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { recordService, exportService, certificateService } from '../api';
 
-const CATEGORIES_LIST = ['Academic', 'Sports', 'Cultural', 'Technical', 'Other'];
-const PRIZE_LIST = ['1st Prize', '2nd Prize', '3rd Prize', 'Participation', 'Consolation'];
+const CATEGORIES_LIST = ['Curricular', 'Co-Curricular', 'Extra-Curricular'];
+const PRIZE_LIST = ['1st Prize', '2nd Prize', '3rd Prize', 'Participation'];
 
 const DEPARTMENTS = [
   'B.Com', 'B.Com CA', 'B.Com PA', 'B.Com (Accounting & Business Analytics)',
@@ -19,17 +19,15 @@ const DEPARTMENTS = [
   'M.Com (International Business)', 'MBA', 'MCA', 'M.Sc Mathematics', 'M.Sc Psychology', 'MSW'
 ];
 
-const CATEGORIES = ['', 'Academic', 'Sports', 'Cultural', 'Technical', 'Other'];
+const CATEGORIES = ['', 'Curricular', 'Co-Curricular', 'Extra-Curricular'];
 
 const categoryColor = (cat) => {
   const map = {
-    Technical: 'bg-blue-50 text-blue-700',
-    Sports:    'bg-emerald-50 text-emerald-700',
-    Cultural:  'bg-purple-50 text-purple-700',
-    Academic:  'bg-amber-50 text-amber-700',
-    Other:     'bg-slate-100 text-slate-600',
+    Curricular: 'bg-amber-50 text-amber-700',
+    'Co-Curricular': 'bg-blue-50 text-blue-700',
+    'Extra-Curricular': 'bg-emerald-50 text-emerald-700',
   };
-  return map[cat] || map.Other;
+  return map[cat] || 'bg-slate-100 text-slate-600';
 };
 
 const RecordList = () => {
@@ -283,11 +281,14 @@ const RecordList = () => {
                 <th className="px-5 py-4">Reg No</th>
                 <th className="px-5 py-4">Student</th>
                 <th className="px-5 py-4">Dept</th>
-                <th className="px-5 py-4">Event Name</th>
-                <th className="px-5 py-4">Description</th>
                 <th className="px-5 py-4">Category</th>
+                <th className="px-5 py-4">Activity</th>
+                <th className="px-5 py-4">Sub-Activity</th>
                 <th className="px-5 py-4">From</th>
                 <th className="px-5 py-4">To</th>
+                <th className="px-5 py-4">Participation Description</th>
+                <th className="px-5 py-4">Awarding Agency</th>
+                <th className="px-5 py-4">Prize / Result</th>
                 <th className="px-5 py-4">Certificate</th>
                 <th className="px-5 py-4 text-center">Actions</th>
               </tr>
@@ -334,21 +335,41 @@ const RecordList = () => {
                       <td className="px-5 py-4">
                         <span className="text-xs px-2 py-1 bg-slate-100 rounded-md text-slate-600 font-semibold whitespace-nowrap">{record.department}</span>
                       </td>
-                      <td className="px-5 py-4 max-w-[140px]">
-                        <p className="text-sm text-slate-700 font-medium truncate" title={record.event_name}>
-                          {record.event_name || <span className="text-slate-400 italic text-xs">—</span>}
-                        </p>
-                      </td>
-                      <td className="px-5 py-4 max-w-[180px]">
-                        <p className="text-sm text-slate-600 truncate" title={record.event_description}>{record.event_description}</p>
-                      </td>
                       <td className="px-5 py-4">
                         <span className={`text-[11px] font-bold px-2 py-1 rounded-md whitespace-nowrap ${categoryColor(record.category)}`}>
                           {record.category}
                         </span>
                       </td>
+                      <td className="px-5 py-4 max-w-[140px]">
+                        <p className="text-sm text-slate-700 font-medium truncate" title={record.event_name}>
+                          {record.event_name || <span className="text-slate-400 italic text-xs">—</span>}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4 max-w-[160px]">
+                        {record.category === 'Extra-Curricular'
+                          ? (
+                            <p className="text-sm text-slate-600 truncate" title={record.custom_category}>
+                              {record.custom_category || <span className="text-slate-400 italic text-xs">—</span>}
+                            </p>
+                          )
+                          : <span className="text-slate-300 italic text-xs">—</span>
+                        }
+                      </td>
                       <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">{record.from_date}</td>
                       <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">{record.to_date}</td>
+                      <td className="px-5 py-4 max-w-[180px]">
+                        <p className="text-sm text-slate-600 truncate" title={record.participation_description}>
+                          {record.participation_description || '—'}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4 max-w-[180px]">
+                        <p className="text-sm text-slate-600 truncate" title={record.awarding_agency}>{record.awarding_agency || '—'}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                          {record.prize_result || '—'}
+                        </span>
+                      </td>
                       <td className="px-5 py-4">
                         <span className={`text-[11px] font-bold px-2 py-1 rounded-md whitespace-nowrap ${
                           record.certificate_filename

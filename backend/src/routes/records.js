@@ -5,10 +5,14 @@ const {
     getRecords,
     getRecordById,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    getStudentsByDeptAndYear
 } = require('../controllers/recordController');
 
 const { requireAuth } = require('../middleware/auth');
+
+// Student lookup
+router.get('/students/lookup', requireAuth, getStudentsByDeptAndYear);
 
 // Create a new record
 router.post('/', requireAuth, createRecord);

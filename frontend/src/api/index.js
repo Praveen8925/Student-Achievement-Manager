@@ -29,6 +29,7 @@ api.interceptors.response.use(
 
 export const recordService = {
   getRecords: (params) => api.get('/records', { params }),
+  getStudents: (params) => api.get('/records/students/lookup', { params }),
   createRecord: (data) => api.post('/records', data),
   getRecordById: (id) => api.get(`/records/${id}`),
   updateRecord: (id, data) => api.put(`/records/${id}`, data),
